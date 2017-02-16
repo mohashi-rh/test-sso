@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:jaxws="http://cxf.apache.org/jaxws"
+	xmlns:httpj="http://cxf.apache.org/transports/http-jetty/configuration"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://cxf.apache.org/jaxws http://cxf.apache.org/schemas/jaxws.xsd
+        http://www.springframework.org/schema/osgi http://www.springframework.org/schema/osgi/spring-osgi.xsd
+        http://cxf.apache.org/transports/http-jetty/configuration http://cxf.apache.org/schemas/configuration/http-jetty.xsd
+        http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
+
+	<import resource="classpath:META-INF/cxf/cxf.xml" />
+
+	<!-- Config Adapter used to access the RH-SSO -->
+    <bean id="kcAdapterConfig" class="org.keycloak.representations.adapters.config.AdapterConfig">
+        <property name="realm" value="demo"/>
+        <property name="resource" value="custom-cxf-endpoint"/>
+        <property name="realmKey" value="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzJKTLDNkButPJvXlutLICqB6E2PxoEentwXIEIrxZUNuJ+wg/2Ozyam+Uq0qIsHDTAXbPAKsq84W/rDDTZqRIGSUQWvo/s46GjdmSayicM1xuyWheow+4UokBshxtuAQXbhbMF5AJ+Fo7ZtMH5/2/MJE0AdxSZMdZPWst93zXjjetGoSE5DDR8gsX69YCrYchuq36+6mmFX5F1wGNSXM4EhMSV9vHSfLoogljRj87wCvWfeDQzsxN//69cxHdjjZ31f7t1AFsolHK5mptKdsEr49htWNVW8Fc00IR+LprlaI6ETTVVu/bj9e6D2/MMhP6csqhXGngsIBDPEV5FK1MwIDAQAB"/>
+        <property name="bearerOnly" value="true"/>
+        <property name="authServerUrl" value="http://localhost:8180/auth" />
+        <property name="sslRequired" value="EXTERNAL"/>
+    </bean>
+
+	<!-- KeycloakJettyAuthenticator -->
+    <bean id="keycloakAuthenticator" class="org.keycloak.adapters.jetty.KeycloakJettyAuthenticator">
+        <property name="adapterConfig">
+            <ref bean="kcAdapterConfig" />
+        </property>
+    </bean>
+
+	<!-- Constraints for REST services -->
+    <bean id="constraintMapping" class="org.eclipse.jetty.security.ConstraintMapping">
+        <property name="constraint" ref="constraint"/>
+        <property name="pathSpec" value="/*"/>
+    </bean>
+
+	<!-- Roles accepted -->
+    <bean id="constraint" class="org.eclipse.jetty.util.security.Constraint">
+        <property name="name" value="Users"/>
+        <property name="roles">
+            <list>
+                <value>user</value>
+                <value>admin</value>
+            </list>
+        </property>
+        <property name="authenticate" value="true"/>
+    </bean>
+
+	<!-- Security Handler that checks the exchanged tokens -->
+    <bean id="securityHandler" class="org.eclipse.jetty.security.ConstraintSecurityHandler">
+        <property name="authenticator" ref="keycloakAuthenticator" />
+        <property name="constraintMappings">
+            <list>
+                <ref bean="constraintMapping" />
+            </list>
+        </property>
+        <property name="authMethod" value="BASIC"/>
+        <property name="realmName" value="does-not-matter"/>
+    </bean>
+
+	<!-- The recommended way to secure the CXF-BUS is to create a new one  -->
+    <httpj:engine-factory bus="cxf" id="kc-cxf-endpoint">
+        <httpj:engine port="8282">
+            <httpj:handlers>
+                <ref bean="securityHandler" />
+            </httpj:handlers>
+            <httpj:sessionSupport>true</httpj:sessionSupport>
+        </httpj:engine>
+    </httpj:engine-factory>
+
+</beans>

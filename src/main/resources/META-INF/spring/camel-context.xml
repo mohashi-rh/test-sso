@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configures the Camel Context -->
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:jaxrs="http://cxf.apache.org/jaxrs"
+	xmlns:cxf="http://camel.apache.org/schema/cxf" xmlns:httpj="http://cxf.apache.org/transports/http-jetty/configuration"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="
+			http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+			http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd
+			http://cxf.apache.org/jaxrs http://cxf.apache.org/schemas/jaxrs.xsd
+			http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
+			http://cxf.apache.org/transports/http-jetty/configuration http://cxf.apache.org/schemas/configuration/http-jetty.xsd
+			http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+	<import resource="../sso/sso.xml" />
+
+	<!-- This is only a processor to proceed with the customer creation -->
+	<bean id="createCustomerProc" class="com.redhat.sso.poc.processors.CreateCustomerProcessor" />
+	<bean id="listCustomersProc" class="com.redhat.sso.poc.processors.ListCustomerProcessor" />
+
+	<!-- JsonProvider -->
+	<bean id="jsonProvider" class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider" />
+	<bean id="jaxbProvider" class="org.apache.cxf.jaxrs.provider.JAXBElementProvider"/>
+
+	<!-- Customer Resource -->
+	<cxf:rsServer id="customerRS" address="http://localhost:8282/cxf/rest"
+		serviceClass="com.redhat.sso.poc.rs.CustomerRS" loggingFeatureEnabled="true"
+		loggingSizeLimit="20" bus="cxf">
+		<cxf:providers>
+			<ref bean="authorizationFilter" />
+			<ref bean="jsonProvider" />
+			<ref bean="jaxbProvider" />
+		</cxf:providers>
+	</cxf:rsServer>
+
+	<!-- Customer Web Service -->
+	<cxf:cxfEndpoint id="customerWS" address="http://localhost:8282/cxf/soap"
+		serviceClass="com.redhat.sso.poc.ws.CustomerWS" bus="cxf">
+		<cxf:inInterceptors>
+			<ref bean="authorizationInterceptor" />
+		</cxf:inInterceptors>
+	</cxf:cxfEndpoint>
+
+	<!-- Authorization Filter used to make the responses from SimpleAuthorizingInterceptor 
+		more user friendly -->
+	<bean id="authorizationFilter" class="org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter">
+		<property name="interceptor" ref="authorizationInterceptor" />
+	</bean>
+
+	<!-- AuthorizationInterceptor which is used to check the current role against 
+		the mapping above -->
+	<bean id="authorizationInterceptor"
+		class="org.apache.cxf.interceptor.security.SimpleAuthorizingInterceptor">
+		<property name="methodRolesMap" ref="rolesMap" />
+	</bean>
+
+	<!-- Roles Mapped -->
+	<util:map id="rolesMap">
+		<!-- Method <-> Role -->
+		<entry key="create" value="admin" />
+		<entry key="list" value="admin user" />
+	</util:map>
+
+	<camelContext id="camelContext" xmlns="http://camel.apache.org/schema/spring"
+		trace="false">
+		
+		<dataFormats>
+			<json id="json" library="Jackson" enableJaxbAnnotationModule="true" />
+		</dataFormats>
+
+		<!-- Rest route to receive all requests that come from REST endpoint -->
+		<route id="rest-route">
+			<from uri="cxfrs:bean:customerRS" />
+			
+			<log message="rest payload: ${body.toString()}" />
+			<!-- CBR to route operations -->
+			<choice>
+				<when>
+					<simple>${header.CamelHttpMethod} == "POST"</simple>
+					
+					<!-- *** important *** convert the contents of ${body} to Pessoa object
+						 otherwise it will be of type org.apache.cxf.message.MessageContentsList 
+						 before return it. -->
+					<convertBodyTo type="com.redhat.sso.poc.model.Pessoa" />
+					
+					<to uri="direct:processCreate" />
+				</when>
+				<when>
+					<simple>${header.CamelHttpMethod} == "GET"</simple>
+					<to uri="direct:processList" />
+				</when>
+				<otherwise>
+					<setBody>
+						<constant>Operation not supported!</constant>
+					</setBody>
+				</otherwise>
+			</choice>
+			<marshal ref="json" />
+			<log message="rest payload: ${body}"></log>
+		</route>
+
+		<!-- WS route to receive all requests that come from SOAP endpoint -->
+		<route id="soap-route">
+			<from uri="cxf:bean:customerWS" />
+			<log message="soap payload: ${body}" />
+			<!-- CBR to route operations -->
+			<choice>
+				<when>
+					<simple>${header.operationName} == "create"</simple>
+					<to uri="direct:processCreate" />
+				</when>
+				<when>
+					<simple>${header.operationName} == "list"</simple>
+					<to uri="direct:processList" />
+				</when>
+				<otherwise>
+					<setBody>
+						<constant>Operation not supported!</constant>
+					</setBody>
+				</otherwise>
+			</choice>
+		</route>
+
+		<!-- Common processing of customer creation -->
+		<route id="process-create">
+			<from uri="direct:processCreate" />
+			<log message="Creating new customer: ${body}" />
+ 			<process ref="createCustomerProc" />
+		</route>
+
+		<route id="process-list">
+			<from uri="direct:processList" />
+			<log message="List customers..." />
+			<process ref="listCustomersProc" />
+		</route>
+	</camelContext>
+</beans>
