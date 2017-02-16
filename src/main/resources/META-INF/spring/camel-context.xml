@@ -17,6 +17,7 @@
 	<!-- This is only a processor to proceed with the customer creation -->
 	<bean id="createCustomerProc" class="com.redhat.sso.poc.processors.CreateCustomerProcessor" />
 	<bean id="listCustomersProc" class="com.redhat.sso.poc.processors.ListCustomerProcessor" />
+	<bean id="versionProc" class="com.redhat.sso.poc.processors.VersionProcessor" />
 
 	<!-- JsonProvider -->
 	<bean id="jsonProvider" class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider" />
@@ -32,6 +33,16 @@
 			<ref bean="jaxbProvider" />
 		</cxf:providers>
 	</cxf:rsServer>
+	
+	<!-- Public Resource -->
+	<cxf:rsServer id="versionRS" address="http://localhost:8383/cxf/rest"
+		serviceClass="com.redhat.sso.poc.rs.VersionRS" loggingFeatureEnabled="true"
+		loggingSizeLimit="20">
+		<cxf:providers>
+			<ref bean="jsonProvider" />
+			<ref bean="jaxbProvider" />
+		</cxf:providers>
+	</cxf:rsServer>
 
 	<!-- Customer Web Service -->
 	<cxf:cxfEndpoint id="customerWS" address="http://localhost:8282/cxf/soap"
@@ -39,6 +50,11 @@
 		<cxf:inInterceptors>
 			<ref bean="authorizationInterceptor" />
 		</cxf:inInterceptors>
+	</cxf:cxfEndpoint>
+	
+	<!-- Public Web Service -->
+	<cxf:cxfEndpoint id="versionWS" address="http://localhost:8383/cxf/soap"
+		serviceClass="com.redhat.sso.poc.ws.VersionWS">
 	</cxf:cxfEndpoint>
 
 	<!-- Authorization Filter used to make the responses from SimpleAuthorizingInterceptor 
@@ -69,7 +85,7 @@
 		</dataFormats>
 
 		<!-- Rest route to receive all requests that come from REST endpoint -->
-		<route id="rest-route">
+		<route id="protected-rest-route">
 			<from uri="cxfrs:bean:customerRS" />
 			
 			<log message="rest payload: ${body.toString()}" />
@@ -95,12 +111,10 @@
 					</setBody>
 				</otherwise>
 			</choice>
-			<marshal ref="json" />
-			<log message="rest payload: ${body}"></log>
 		</route>
 
 		<!-- WS route to receive all requests that come from SOAP endpoint -->
-		<route id="soap-route">
+		<route id="protected-soap-route">
 			<from uri="cxf:bean:customerWS" />
 			<log message="soap payload: ${body}" />
 			<!-- CBR to route operations -->
@@ -121,6 +135,42 @@
 			</choice>
 		</route>
 
+		<!-- Version Rest Route -->
+		<route id="public-rest-route">
+			<from uri="cxfrs:bean:versionRS" />
+			<log message="Version..." />
+			<!-- CBR to route operations -->
+			<choice>
+				<when>
+					<simple>${header.CamelHttpMethod} == "GET"</simple>
+					<to uri="direct:processVersion" />
+				</when>
+				<otherwise>
+					<setBody>
+						<constant>Operation not supported!</constant>
+					</setBody>
+				</otherwise>
+			</choice>
+		</route>
+		
+		<!-- WS route to receive all requests that come from SOAP endpoint -->
+		<route id="public-soap-route">
+			<from uri="cxf:bean:versionWS" />
+			<log message="soap payload: ${body}" />
+			<!-- CBR to route operations -->
+			<choice>
+				<when>
+					<simple>${header.operationName} == "getVersion"</simple>
+					<to uri="direct:processVersion" />
+				</when>
+				<otherwise>
+					<setBody>
+						<constant>Operation not supported!</constant>
+					</setBody>
+				</otherwise>
+			</choice>
+		</route>
+
 		<!-- Common processing of customer creation -->
 		<route id="process-create">
 			<from uri="direct:processCreate" />
@@ -128,10 +178,19 @@
  			<process ref="createCustomerProc" />
 		</route>
 
+		<!-- Common processing of customer list -->
 		<route id="process-list">
 			<from uri="direct:processList" />
 			<log message="List customers..." />
 			<process ref="listCustomersProc" />
 		</route>
+		
+		<!-- Common processing of version -->
+		<route id="process-route">
+			<from uri="direct:processVersion" />
+			<log message="Returning Version..." />
+			<process ref="versionProc" />
+		</route>
+		
 	</camelContext>
 </beans>
