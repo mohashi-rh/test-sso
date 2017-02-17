@@ -23,6 +23,17 @@ public class Pessoa {
 		this.email = email;
 	}
 	@Override
+	public boolean equals(Object obj) {
+		if ( obj != null && (obj instanceof Pessoa) ) {
+			Pessoa p = (Pessoa) obj;
+			
+			return ((this.getName() == p.getName() || this.getName().equals(p.getName()))) &&
+				   ((this.getEmail() == p.getEmail() || this.getEmail().equals(p.getEmail())));
+		}
+		
+		return false;
+	}
+	@Override
 	public String toString() {
 		return "Pessoa [name="+this.name+",email="+this.email+"]";
 	}

@@ -12,11 +12,11 @@ public class ListCustomerProcessor implements Processor {
 
 	@Override
 	public void process(Exchange exchange) throws Exception {
-		List<Pessoa> pessoaList = new LinkedList<Pessoa>();
-		pessoaList.add(createPessoa("Marcelo", "mohashi@redhat.com"));
+		List<Pessoa> pessoaList = new LinkedList<>();
+		pessoaList.add(createPessoa("John", "john@gmail.com"));
 		pessoaList.add(createPessoa("Silvio", "ssantos@gmail.com"));
 		pessoaList.add(createPessoa("Jo", "jsoares@gmail.com"));
-		exchange.getIn().setBody(pessoaList);
+		exchange.getOut().setBody(pessoaList);
 	}
 
 	static Pessoa createPessoa(String name, String email) {

@@ -18,6 +18,7 @@
 	<bean id="createCustomerProc" class="com.redhat.sso.poc.processors.CreateCustomerProcessor" />
 	<bean id="listCustomersProc" class="com.redhat.sso.poc.processors.ListCustomerProcessor" />
 	<bean id="versionProc" class="com.redhat.sso.poc.processors.VersionProcessor" />
+	<bean id="pessoaListWrapperProc" class="com.redhat.sso.poc.processors.PessoaListWrapperProcessor" />
 
 	<!-- JsonProvider -->
 	<bean id="jsonProvider" class="com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider" />
@@ -79,10 +80,6 @@
 
 	<camelContext id="camelContext" xmlns="http://camel.apache.org/schema/spring"
 		trace="false">
-		
-		<dataFormats>
-			<json id="json" library="Jackson" enableJaxbAnnotationModule="true" />
-		</dataFormats>
 
 		<!-- Rest route to receive all requests that come from REST endpoint -->
 		<route id="protected-rest-route">
@@ -97,13 +94,16 @@
 					<!-- *** important *** convert the contents of ${body} to Pessoa object
 						 otherwise it will be of type org.apache.cxf.message.MessageContentsList 
 						 before return it. -->
-					<convertBodyTo type="com.redhat.sso.poc.model.Pessoa" />
-					
 					<to uri="direct:processCreate" />
+
+					<convertBodyTo type="com.redhat.sso.poc.model.Pessoa" />					
 				</when>
 				<when>
 					<simple>${header.CamelHttpMethod} == "GET"</simple>
+					
 					<to uri="direct:processList" />
+					
+					<convertBodyTo type="java.util.List" />
 				</when>
 				<otherwise>
 					<setBody>
@@ -121,11 +121,17 @@
 			<choice>
 				<when>
 					<simple>${header.operationName} == "create"</simple>
+					
 					<to uri="direct:processCreate" />
+					
+					<convertBodyTo type="com.redhat.sso.poc.model.Pessoa" />
 				</when>
 				<when>
 					<simple>${header.operationName} == "list"</simple>
+					
 					<to uri="direct:processList" />
+					
+					<process ref="pessoaListWrapperProc" />
 				</when>
 				<otherwise>
 					<setBody>
@@ -183,6 +189,7 @@
 			<from uri="direct:processList" />
 			<log message="List customers..." />
 			<process ref="listCustomersProc" />
+			<convertBodyTo type="java.util.List" />
 		</route>
 		
 		<!-- Common processing of version -->

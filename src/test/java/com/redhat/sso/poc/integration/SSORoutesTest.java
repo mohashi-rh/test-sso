@@ -25,6 +25,7 @@ import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import com.redhat.sso.poc.model.Pessoa;
+import com.redhat.sso.poc.model.PessoaList;
 import com.redhat.sso.poc.model.Version;
 import com.redhat.sso.poc.ws.CustomerWS;
 import com.redhat.sso.poc.ws.VersionWS;
@@ -170,9 +171,7 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 	public void testUnauthorizedAccessToAdminWS() {
 		try {
 			CustomerWS customerWS = createProxy(CustomerWS.class, BACKEND_BASE_PATH+"/cxf/soap/customerWS", new HttpHeaderInterceptor(userAccessToken));
-			Pessoa pessoa = new Pessoa();
-			pessoa.setName("John");
-			pessoa.setEmail("john@company.com");
+			Pessoa pessoa = createPessoa("John", "john@company.com");
 			customerWS.create(pessoa);
 			fail("SOAPFaultException should be thown...");
 		} catch (SOAPFaultException e) {
@@ -200,9 +199,7 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 	public void testExpiredTokenAccessToUserWS() {
 		try {
 			CustomerWS customerWS = createProxy(CustomerWS.class, BACKEND_BASE_PATH+"/cxf/soap/customerWS", new HttpHeaderInterceptor(expiredToken));
-			Pessoa pessoa = new Pessoa();
-			pessoa.setName("John");
-			pessoa.setEmail("john@company.com");
+			Pessoa pessoa = createPessoa("John", "john@company.com");
 			customerWS.create(pessoa);
 			fail("WebServiceException should be thown...");
 		} catch (WebServiceException e) {
@@ -229,6 +226,22 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 	}
 	
 	@Test
+	public void testAllowedAccessToUserWS() {
+		CustomerWS customerWS = createProxy(CustomerWS.class, BACKEND_BASE_PATH+"/cxf/soap/customerWS", new HttpHeaderInterceptor(userAccessToken));
+		PessoaList pessoaList = customerWS.list();
+		assertNotNull("The result should not be null", pessoaList);
+		assertNotNull("The list should not be null", pessoaList.getList());
+		assertListSize("The list should contain 3 items", pessoaList.getList(), 3);
+		assertTrue("The list should contain all items...", 
+				Arrays.asList(createPessoa("John", "john@gmail.com"),
+						createPessoa("Silvio", "ssantos@gmail.com"),
+						createPessoa("Jo", "jsoares@gmail.com")).
+					containsAll(
+							pessoaList.getList())
+				);
+	}
+	
+	@Test
 	public void testAllowedAccessToAdminResource() {
 		/* @formatter: off */
 			given().
@@ -247,6 +260,15 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 				content("name", is("John")).
 				content("email", is("john@company.com"));
 		/* @formatter:on */	
+	}
+	
+	@Test
+	public void testAllowedAccessToAdminWS() {
+		CustomerWS customerWS = createProxy(CustomerWS.class, BACKEND_BASE_PATH+"/cxf/soap/customerWS", new HttpHeaderInterceptor(adminAccessToken));
+		Pessoa pessoa1 = createPessoa("John", "john@gmail.com");
+		Pessoa pessoa2 = customerWS.create(pessoa1);
+		assertNotNull("The result should not be null", pessoa2);
+		assertEquals("The pessoa should equal to first pessoa", pessoa1, pessoa2);
 	}
 	
 	@Test
@@ -311,6 +333,13 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 			message.put(Message.PROTOCOL_HEADERS, headers);
 		}
 
+	}
+
+	private Pessoa createPessoa(String name, String email) {
+		Pessoa pessoa = new Pessoa();
+		pessoa.setName(name);
+		pessoa.setEmail(email);
+		return pessoa;
 	}
 
 	public class AdminHttpHeaderInterceptor extends AbstractPhaseInterceptor<Message> {
