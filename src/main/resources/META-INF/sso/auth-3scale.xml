@@ -13,15 +13,15 @@
 	<import resource="classpath:META-INF/cxf/cxf.xml" />
 
 	<!-- Config Adapter used to access the RH-SSO -->
-    <bean id="kcAdapterConfig" class="org.keycloak.representations.adapters.config.AdapterConfig">
+	<bean id="kcAdapterConfig" class="org.keycloak.representations.adapters.config.AdapterConfig">
         <property name="realm" value="demo"/>
         <property name="resource" value="custom-cxf-endpoint"/>
         <property name="realmKey" value="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzJKTLDNkButPJvXlutLICqB6E2PxoEentwXIEIrxZUNuJ+wg/2Ozyam+Uq0qIsHDTAXbPAKsq84W/rDDTZqRIGSUQWvo/s46GjdmSayicM1xuyWheow+4UokBshxtuAQXbhbMF5AJ+Fo7ZtMH5/2/MJE0AdxSZMdZPWst93zXjjetGoSE5DDR8gsX69YCrYchuq36+6mmFX5F1wGNSXM4EhMSV9vHSfLoogljRj87wCvWfeDQzsxN//69cxHdjjZ31f7t1AFsolHK5mptKdsEr49htWNVW8Fc00IR+LprlaI6ETTVVu/bj9e6D2/MMhP6csqhXGngsIBDPEV5FK1MwIDAQAB"/>
         <property name="bearerOnly" value="true"/>
-        <property name="authServerUrl" value="http://localhost:8180/auth" />
+        <property name="authServerUrl" value="https://192.168.100.1:8543/auth" />
         <property name="sslRequired" value="EXTERNAL"/>
     </bean>
-
+ 
 	<!-- KeycloakJettyAuthenticator -->
     <bean id="keycloakAuthenticator" class="org.keycloak.adapters.jetty.KeycloakJettyAuthenticator">
         <property name="adapterConfig">

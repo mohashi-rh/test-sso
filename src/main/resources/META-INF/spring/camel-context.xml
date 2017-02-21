@@ -12,7 +12,7 @@
 			http://cxf.apache.org/transports/http-jetty/configuration http://cxf.apache.org/schemas/configuration/http-jetty.xsd
 			http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
-	<import resource="../sso/sso.xml" />
+	<import resource="../sso/auth-${auth.mode}.xml" />
 
 	<!-- This is only a processor to proceed with the customer creation -->
 	<bean id="createCustomerProc" class="com.redhat.sso.poc.processors.CreateCustomerProcessor" />

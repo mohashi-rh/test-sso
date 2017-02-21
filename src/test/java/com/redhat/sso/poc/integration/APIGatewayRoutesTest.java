@@ -23,6 +23,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
 
 import com.redhat.sso.poc.model.Pessoa;
 import com.redhat.sso.poc.model.PessoaList;
@@ -30,14 +31,14 @@ import com.redhat.sso.poc.model.Version;
 import com.redhat.sso.poc.ws.CustomerWS;
 import com.redhat.sso.poc.ws.VersionWS;
 
-public class SSORoutesTest extends CamelSpringTestSupport {
+public class APIGatewayRoutesTest extends CamelSpringTestSupport {
 
-	private static final String CLIENT_ID = "custom-cxf-endpoint";
-	private static final String CLIENT_SECRET = "f74f09ef-2756-4fee-8494-d0a462279345";
+	private static final String CLIENT_ID = "5868cc4c";
+	private static final String CLIENT_SECRET = "bda9b483a159ae762abf38675f159996";
 	private static final String USERNAME = "user";
 	private static final String PASSWORD = "mo123";
-	private static final String RH_SSO_URI = "http://localhost:8180/auth/realms/demo/protocol/openid-connect/token";
-	private static final String BACKEND_BASE_PATH = "http://localhost:8282";
+	private static final String RH_SSO_URI = "https://5ef85647.ngrok.io/oauth/token";
+	private static final String BACKEND_BASE_PATH = "https://5ef85647.ngrok.io";
 	private static final String PUBLIC_BACKEND_BASE_PATH = "http://localhost:8383";
 	private String expiredToken = "Bearer eyJhbGciOiJSUzI1NiJ9.eyJqdGkiOiJkMmUxYjAxNi0zN2I2LTQzZT"
 			+ "QtYTQ1My0xZmJmZDE3NTJmYzYiLCJleHAiOjE0ODcyNDcyMDksIm5iZiI6MCwiaWF0IjoxNDg3MjQ2OTA5L"
@@ -110,7 +111,7 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 			when().
 				post(BACKEND_BASE_PATH+"/cxf/rest/customer").
 			then().
-				statusCode(401);
+				statusCode(403);
 		/* @formatter:on */	
 			
 		/* @formatter: off */
@@ -119,7 +120,7 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 			when().
 				get(BACKEND_BASE_PATH+"/cxf/rest/customer").
 			then().
-				statusCode(401);
+				statusCode(403);
 		/* @formatter:on */
 	}
 	
@@ -135,7 +136,7 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 		} catch (WebServiceException e) {
 			assertNotNull("Exception can't be null", e.getCause());
 			assertEquals("Exception cause should be of type HTTPException", HTTPException.class, e.getCause().getClass());
-			assertTrue("Exception reason should contain [HTTP response '401: Unauthorized']", e.getCause().getMessage().contains("HTTP response '401: Unauthorized'"));
+			assertTrue("Exception reason should contain [HTTP response '403: Forbidden']", e.getCause().getMessage().contains("HTTP response '403: Forbidden'"));
 		}
 
 		try {
@@ -145,7 +146,7 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 		} catch (WebServiceException e) {
 			assertNotNull("Exception can't be null", e.getCause());
 			assertEquals("Exception cause should be of type HTTPException", HTTPException.class, e.getCause().getClass());
-			assertTrue("Exception reason should contain [HTTP response '401: Unauthorized']", e.getCause().getMessage().contains("HTTP response '401: Unauthorized'"));
+			assertTrue("Exception reason should contain [HTTP response '403: Forbidden']", e.getCause().getMessage().contains("HTTP response '403: Forbidden'"));
 		}
 	}
 
@@ -174,7 +175,7 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 			Pessoa pessoa = createPessoa("John", "john@company.com");
 			customerWS.create(pessoa);
 			fail("SOAPFaultException should be thown...");
-		} catch (WebServiceException e) {
+		} catch (SOAPFaultException e) {
 			assertNotNull("Exception can't be null", e.getCause());
 			assertEquals("Exception cause should be of type SoapFault", SoapFault.class, e.getCause().getClass());
 			assertTrue("Exception reason should contain [Unauthorized]", e.getCause().getMessage().contains("Unauthorized"));
@@ -191,7 +192,7 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 		when().
 			get(BACKEND_BASE_PATH+"/cxf/rest/customer").
 		then().
-			statusCode(401);
+			statusCode(403);
 		/* @formatter:on */	
 	}
 	
@@ -199,14 +200,13 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 	public void testExpiredTokenAccessToUserWS() {
 		try {
 			CustomerWS customerWS = createProxy(CustomerWS.class, BACKEND_BASE_PATH+"/cxf/soap/customerWS", new HttpHeaderInterceptor(expiredToken));
-			Pessoa pessoa = createPessoa("John", "john@company.com");
+			Pessoa pessoa = createPessoa("John", "john@company.();//com");
 			customerWS.create(pessoa);
 			fail("WebServiceException should be thown...");
 		} catch (WebServiceException e) {
-			e.printStackTrace();
 			assertNotNull("Exception can't be null", e.getCause());
 			assertEquals("Exception cause should be of type HTTPException", HTTPException.class, e.getCause().getClass());
-			assertTrue("Exception reason should contain [HTTP response '401: Unauthorized']", e.getCause().getMessage().contains("HTTP response '401: Unauthorized'"));
+			assertTrue("Exception reason should contain [HTTP response '403: Forbidden']", e.getCause().getMessage().contains("HTTP response '403: Forbidden'"));
 		}
 	}
 	
@@ -315,7 +315,8 @@ public class SSORoutesTest extends CamelSpringTestSupport {
 
 	@Override
 	protected AbstractApplicationContext createApplicationContext() {
-		System.setProperty("auth.mode", "sso");
+		System.setProperty("auth.mode", "3scale");
+		
 		return new ClassPathXmlApplicationContext("META-INF/spring/camel-context.xml");
 	}
 
