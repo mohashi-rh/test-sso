@@ -277,7 +277,6 @@
 					<fileApplicationContextUri>src/main/resources/META-INF/spring/camel-context.xml</fileApplicationContextUri>
 				</configuration>
 			</plugin>
-
 		</plugins>
 	</build>
 </project>

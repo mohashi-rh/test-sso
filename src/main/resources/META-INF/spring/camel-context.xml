@@ -13,6 +13,8 @@
 			http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
 	<import resource="../sso/auth-${auth.mode}.xml" />
+	
+	
 
 	<!-- This is only a processor to proceed with the customer creation -->
 	<bean id="createCustomerProc" class="com.redhat.sso.poc.processors.CreateCustomerProcessor" />
@@ -25,7 +27,7 @@
 	<bean id="jaxbProvider" class="org.apache.cxf.jaxrs.provider.JAXBElementProvider"/>
 
 	<!-- Customer Resource -->
-	<cxf:rsServer id="customerRS" address="http://localhost:8282/cxf/rest"
+	<cxf:rsServer id="customerRS" address="http://localhost:${cxf.bus.http.port}/cxf/rest"
 		serviceClass="com.redhat.sso.poc.rs.CustomerRS" loggingFeatureEnabled="true"
 		loggingSizeLimit="20" bus="cxf">
 		<cxf:providers>
@@ -36,7 +38,7 @@
 	</cxf:rsServer>
 	
 	<!-- Public Resource -->
-	<cxf:rsServer id="versionRS" address="http://localhost:8383/cxf/rest"
+	<cxf:rsServer id="versionRS" address="http://localhost:${cxf.public.bus.http.port}/cxf/rest"
 		serviceClass="com.redhat.sso.poc.rs.VersionRS" loggingFeatureEnabled="true"
 		loggingSizeLimit="20">
 		<cxf:providers>
@@ -46,7 +48,7 @@
 	</cxf:rsServer>
 
 	<!-- Customer Web Service -->
-	<cxf:cxfEndpoint id="customerWS" address="http://localhost:8282/cxf/soap"
+	<cxf:cxfEndpoint id="customerWS" address="http://localhost:${cxf.bus.http.port}/cxf/soap"
 		serviceClass="com.redhat.sso.poc.ws.CustomerWS" bus="cxf">
 		<cxf:inInterceptors>
 			<ref bean="authorizationInterceptor" />
@@ -54,7 +56,7 @@
 	</cxf:cxfEndpoint>
 	
 	<!-- Public Web Service -->
-	<cxf:cxfEndpoint id="versionWS" address="http://localhost:8383/cxf/soap"
+	<cxf:cxfEndpoint id="versionWS" address="http://localhost:${cxf.public.bus.http.port}/cxf/soap"
 		serviceClass="com.redhat.sso.poc.ws.VersionWS">
 	</cxf:cxfEndpoint>
 

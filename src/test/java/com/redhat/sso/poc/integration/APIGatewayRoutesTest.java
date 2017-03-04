@@ -31,6 +31,14 @@ import com.redhat.sso.poc.model.Version;
 import com.redhat.sso.poc.ws.CustomerWS;
 import com.redhat.sso.poc.ws.VersionWS;
 
+/**
+ * This test assumes that all 3scale related services are setup.
+ * 
+ * 
+ *  
+ * @author mohashi
+ *
+ */
 public class APIGatewayRoutesTest extends CamelSpringTestSupport {
 
 	private static final String CLIENT_ID = "5868cc4c";

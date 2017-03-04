@@ -1,0 +1,64 @@
+#Criar o profile fabric
+
+fabric:create --zookeeper-password admin --wait-for-provisioning --manual-ip 127.0.0.1
+
+#Criar os containers filhos
+
+fabric:container-create-child root child 2
+
+#Criar o(s) gateway(s)
+
+fabric:container-create-child root gateway 1
+
+#Modificar o profile do gateway
+
+fabric:container-change-profile gateway gateway-http
+
+#Criar o profile test-sso
+
+fabric:profile-create --parent default --parent feature-camel test-sso
+
+#Adicionar o repositorio ao profile
+
+fabric:profile-edit --repository mvn:org.keycloak/keycloak-osgi-features/1.9.8.Final-redhat-1/xml/features test-sso
+
+#Adiconar as features necessárias
+
+fabric:profile-edit --feature keycloak test-sso
+fabric:profile-edit --feature jetty/[9,10) test-sso
+fabric:profile-edit --feature camel-core test-sso
+fabric:profile-edit --feature camel-spring test-sso
+fabric:profile-edit --feature camel-cxf test-sso
+fabric:profile-edit --feature camel-jetty9 test-sso
+fabric:profile-edit --feature camel-jackson test-sso
+fabric:profile-edit --feature camel-jaxb test-sso
+
+fabric:profile-edit --bundle mvn:org.keycloak/keycloak-jetty-adapter-spi/1.9.8.Final-redhat-1 \
+   --bundle mvn:org.keycloak/keycloak-jetty-core/1.9.8.Final-redhat-1 \
+   --bundle mvn:org.keycloak/keycloak-jetty92-adapter/1.7.0.Final \
+   --bundle mvn:org.keycloak/keycloak-jetty-core/1.9.8.Final \
+   --bundle mvn:org.keycloak/keycloak-jetty-adapter-spi/1.9.8.Final-redhat-1 \
+   --bundle mvn:com.redhat.test/test-sso/1.0.0-SNAPSHOT \
+   test-sso
+
+#Criar os profiles específicos
+
+profile-create --parent test-sso test-sso-child1
+profile-create --parent test-sso test-sso-child2
+
+#Configurar propriedades específicas dos profiles
+
+profile-edit --system auth.mode=3scale test-sso
+profile-edit --system cxf.bus.http.port=8281 test-sso-child1
+profile-edit --system cxf.bus.http.port=8282 test-sso-child2
+profile-edit --system cxf.public.bus.http.port=8383 test-sso-child1
+profile-edit --system cxf.public.bus.http.port=8384 test-sso-child2
+
+#Modificando profiles
+
+container-change-profile child1 test-sso-child1
+container-change-profile child2 test-sso-child2
+
+#Atribuir os profiles aos containers
+
+  

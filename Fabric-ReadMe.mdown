@@ -1,0 +1,49 @@
+Criar o profile fabric
+
+*Command:* fabric:create --zookeeper-password admin
+
+Criar os containers filhos
+
+*Command:* fabric:container-create-child root child 2
+
+Criar o(s) gateway(s)
+
+*Command:* fabric:container-create-child root gateway 1
+
+Modificar o profile do gateway
+
+*Command:* fabric:container-change-profile gateway1 gateway-http
+
+Criar o profile test-sso
+
+*Command:* fabric:profile-create --parent default --parent feature-camel test-sso
+
+Adicionar o repositorio ao profile
+
+*Command:* fabric:profile-edit --repository mvn:org.keycloak/keycloak-osgi-features/1.9.8.Final-redhat-1/xml/features test-sso
+
+Adiconar as features necessárias
+
+*Command:* fabric:profile-edit --feature keycloak --feature jetty/[9,10) --bundle mvn:org.keycloak/keycloak-jetty-adapter-spi/1.9.8.Final-redhat-1 --bundle mvn:org.keycloak/keycloak-jetty-core/1.9.8.Final-redhat-1 --bundle mvn:org.keycloak/keycloak-jetty92-adapter/1.7.0.Final --bundle mvn:org.keycloak/keycloak-jetty-core/1.9.8.Final --bundle mvn:org.keycloak/keycloak-jetty-adapter-spi/1.9.8.Final-redhat-1 test-sso
+
+Criar os profiles específicos
+
+*Command:* profile-create --parent test-sso test-sso-child1
+*Command:* profile-create --parent test-sso test-sso-child2
+
+Configurar propriedades específicas dos profiles
+
+*Command:* profile-edit --system auth.mode=3scale test-sso
+*Command:* profile-edit --system cxf.bus.http.port=8281 test-sso-child1
+*Command:* profile-edit --system cxf.bus.http.port=8282 test-sso-child2
+*Command:* profile-edit --system cxf.public.bus.http.port=8383 test-sso-child1
+*Command:* profile-edit --system cxf.public.bus.http.port=8384 test-sso-child2
+
+Modificando profiles
+
+*Command:* container-change-profile child1 test-sso-child1
+*Command:* container-change-profile child2 test-sso-child2
+
+Atribuir os profiles aos containers
+
+*Command:* 
